@@ -1,15 +1,14 @@
+
 import "dotenv/config";
 import logger from "./logger.js";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 
-//Pathes - interface defining object type containing all required file path values
 type Pathes = {
   inputFile: string;
   codeFile: string;
   commentsFile: string;
 };
-// getPathes - function returning object of type Pathes with all required file path values
 function getPathes(): Pathes {
   if (process.argv.length != 5) {
     throw Error(
@@ -23,10 +22,9 @@ function getPathes(): Pathes {
   return { inputFile, codeFile, commentsFile };
 }
 
-// getCodeWithComments - function returning lines from the input file as an array of strings
 function getCodeWithComments(inputFile: string): string[] {
   const content: string = readFileSync(inputFile, { encoding: "utf8" });
-  const res = content.split("\n"); //getting array of strings separated by new line symbol
+  const res = content.split("\n"); 
   logger.trace(
     "whole arrey of lines containing comments and code is " + res.join(";"),
   );
@@ -34,50 +32,41 @@ function getCodeWithComments(inputFile: string): string[] {
   return res;
 }
 
-// CodeComments - interface defining type with code and comments
 type CodeComments = {
   code: string;
   comments: string;
 };
-// codeCommentsSeparation - function returning object with code and comments fields
 function codeCommentsSeparation(codeComments: string[]): CodeComments {
   return codeComments.reduce(reducer, { code: "", comments: "" });
 }
-// reducer - callback for reducing in the function codeCommentsSeparation
 function reducer(codeComments: CodeComments, line: string): CodeComments {
   let code = codeComments.code;
   let comments = codeComments.comments;
   const indexComment = line.indexOf("/");
-  //additional condition for avoiding "//" in the example code inside indexOf("//")
   if (indexComment < 0 || line[indexComment + 1] !== "/") {
-    code += "\n" + line; //line contains only code
+    code += "\n" + line; 
   } else {
-    //line contains comments
     const codePart = line.substring(0, indexComment);
     comments +=
       "\n" + " ".repeat(codePart.length ? 3 : 0) + line.substring(indexComment);
-    codePart.trim() !== "" && (code += "\n" + codePart); //line contains both code and comments
+    codePart.trim() !== "" && (code += "\n" + codePart); 
   }
   return { code, comments };
 }
-// main - integration controller function
 async function main() {
   try {
-    const { inputFile, codeFile, commentsFile } = getPathes(); //1 - getting all file path values
-    //2 - logging at level "debug" arguments of the command line
+    const { inputFile, codeFile, commentsFile } = getPathes(); 
     logger.debug(`input file combining code with comments is ${inputFile}`);
     logger.debug(`file with only code is ${codeFile}`);
     logger.debug(`file with only comments is ${commentsFile}`);
-    const codeWithComments: string[] = getCodeWithComments(inputFile); //3 - getting code with comments
-    const { code, comments } = codeCommentsSeparation(codeWithComments); //4 - getting object with separated code and comments
-    //5 - writing code and comments to appropriate files
-    await writeTofiles(codeFile, code, commentsFile, comments);
-    //6 - logging finishing of savings at level "info"
+    const codeWithComments: string[] = getCodeWithComments(inputFile); 
+    const { code, comments } = codeCommentsSeparation(codeWithComments); 
+    writeTofiles(codeFile, code, commentsFile, comments);
     logger.info(`code is saved to file ${codeFile}`);
     logger.info(`comments are saved to file ${commentsFile}`);
   } catch (error) {
     const errorObj = error as Error;
-    logger.error(errorObj.message); //7 - logging an error
+    logger.error(errorObj.message); 
   }
 }
 main();
@@ -88,7 +77,6 @@ async function writeTofiles(
   commentsFile: string,
   comments: string,
 ): Promise<void> {
-  //simmultanious writing to code and comments files
   const prCode = writeFile(codeFile, code).catch((error) => {
     throw Error(
       `writing to file with only code with error: ${(error as Error).message}`,
