@@ -1,13 +1,22 @@
 import { EventEmitter } from 'node:events';
 import LoggerHandler from './LoggerHandler.js';
 type LoggerLevel = "fatal"|"error"|"warn"|"info"|"debug"|"trace"
+const DEFAULT_LOGGER_LEVEL = "info"
+const logDef: Record<LoggerLevel, number> = {
+  fatal: 1,
+  error: 2,
+  warn: 3,
+  info: 4,
+  debug: 5,
+  trace: 6,
+};
 export default class LoggerEmitter extends EventEmitter {
     constructor(handlers: LoggerHandler[]=[]) {
         super();
         handlers.forEach(h => this.on("message", h.handler()))
     }
     log(level: LoggerLevel, message: string): void {
-        //TODO Apply being taken "level" that should be compered with environment variable LOGGER_LEVEL for emitting
+        // Apply being taken "level" that should be compered with environment variable LOGGER_LEVEL for emitting
         //env.LOGGER_LEVEL = "trace" emits for any given level
         //env.LOGGER_LEVEL = "debug" emits for any level except "trace"
         //env.LOGGER_LEVEL = "info"  emits for any level except "trace", "debug"
@@ -15,7 +24,12 @@ export default class LoggerEmitter extends EventEmitter {
         //env.LOGGER_LEVEL = "error" emits only "error", "fatal"
         //env.LOGGER_LEVEL = "fatal" emits only "fatal"
         //env.LOGGER_LEVEL is a non-existing level value or missing the "info" should be implied
-        this.emit("message", message)
+        let configLevel: string = process.env.LOGGER_LEVEL ?? DEFAULT_LOGGER_LEVEL
+        if (!Object.keys(logDef).includes(configLevel)) {
+            configLevel = DEFAULT_LOGGER_LEVEL
+        }
+
+        logDef[level] <= logDef[configLevel as LoggerLevel] && this.emit("message", message)
     }
     setHandler(handler: (message:string) => void) {
         this.on("message", handler)
