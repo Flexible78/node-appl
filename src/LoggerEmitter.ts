@@ -1,8 +1,9 @@
 import { EventEmitter } from 'node:events';
+import LoggerHandler from './LoggerHandler.js';
 export default class LoggerEmitter extends EventEmitter {
-    constructor(handlers: ((message: string)=>void)[]=[]) {
+    constructor(handlers: LoggerHandler[]=[]) {
         super();
-        handlers.forEach(h => this.on("message", h))
+        handlers.forEach(h => this.on("message", h.handler()))
     }
     log(message: string): void {
         this.emit("message", message)
