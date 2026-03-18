@@ -2,7 +2,7 @@ import "dotenv/config";
 import logger from "./logger.js";
 import { createWriteStream } from "node:fs";
 const writeStream = createWriteStream("large_file", {encoding: "utf8", highWaterMark: 1024 * 1024 * 10})
-const nChunks = 1_000_00
+const nChunks = 1_000_000
 const chunkNumbers = 1000
  const numbers: string = getRandomNumbers(chunkNumbers).join(" ");
 let i = 0;
