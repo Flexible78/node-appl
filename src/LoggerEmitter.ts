@@ -19,10 +19,15 @@ export default class LoggerEmitter extends EventEmitter {
 
         if (loggerLevelPriority[level] <= loggerLevelPriority[currentLevel]) {
             this.emit("message", level, message);
+            this.emit(level, level, message);
         }
     }
 
     setHandler(handler: LoggerHandler): void {
         this.on("message", handler.handler());
+    }
+
+    setLevelHandler(level: LoggerLevel, handler: LoggerHandler): void {
+        this.on(level, handler.handler());
     }
 }

@@ -11,6 +11,8 @@ const loggerEmitter = new LoggerEmitter([
     new FileHandler("logs.txt", formatter),
 ]);
 
+loggerEmitter.setLevelHandler("error", new FileHandler("errors.txt", formatter));
+
 const entries: { level: LoggerLevel; message: string }[] = [
     { level: "info", message: "Hello world" },
     { level: "warn", message: "Watch out" },
