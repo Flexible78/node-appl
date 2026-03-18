@@ -1,16 +1,28 @@
-import { EventEmitter } from 'node:events';
+import { EventEmitter } from "node:events";
+import {
+    defaultLoggerLevel,
+    isLoggerLevel,
+    loggerLevelPriority,
+    type LoggerLevel,
+} from "./LoggerLevel.js";
+import LoggerHandler from "./LoggerHandler.js";
 
 export default class LoggerEmitter extends EventEmitter {
-    constructor(handlers: ((message: string) => void)[] = []) {
+    constructor(handlers: LoggerHandler[] = []) {
         super();
-        handlers.forEach(h => this.on("message", h));
+        handlers.forEach(handler => this.setHandler(handler));
     }
 
-    log(message: string): void {
-        this.emit("message", message);
+    log(level: LoggerLevel, message: string): void {
+        const envLevel = process.env.LOGGER_LEVEL?.toLowerCase() ?? defaultLoggerLevel;
+        const currentLevel = isLoggerLevel(envLevel) ? envLevel : defaultLoggerLevel;
+
+        if (loggerLevelPriority[level] <= loggerLevelPriority[currentLevel]) {
+            this.emit("message", level, message);
+        }
     }
 
-    setHandler(handler: (message: string) => void) {
-        this.on("message", handler);
+    setHandler(handler: LoggerHandler): void {
+        this.on("message", handler.handler());
     }
 }

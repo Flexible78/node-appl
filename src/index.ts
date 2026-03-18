@@ -1,11 +1,21 @@
 import "dotenv/config";
-import logger from "./logger.js";
 import LoggerEmitter from "./LoggerEmitter.js";
-import { consoleLogHandler } from "./consoleLogHandler.js";
-import { fileLogHandler } from "./fileLogHandler.js";
+import type { LoggerLevel } from "./LoggerLevel.js";
+import ConsoleHandler from "./consoleLogHandler.js";
+import FileHandler from "./fileLogHandler.js";
+import TimeFormatter from "./TimeFormatter.js";
 
-const loggerEmitter = new LoggerEmitter([consoleLogHandler, fileLogHandler]);
+const formatter = new TimeFormatter("EST");
+const loggerEmitter = new LoggerEmitter([
+    new ConsoleHandler(formatter),
+    new FileHandler("logs.txt", formatter),
+]);
 
-const messages: string[] = ["Hello world", "What's up", "How are you", "Bye"];
+const entries: { level: LoggerLevel; message: string }[] = [
+    { level: "info", message: "Hello world" },
+    { level: "warn", message: "Watch out" },
+    { level: "error", message: "Something went wrong" },
+    { level: "trace", message: "Trace details" },
+];
 
-messages.forEach(m => loggerEmitter.log(m));
+entries.forEach(({ level, message }) => loggerEmitter.log(level, message));
