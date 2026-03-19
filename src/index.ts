@@ -5,8 +5,17 @@ import RandomNumbersStream from "./RandomNumbersStream.js";
 import FilterNumberStream from "./FilterStream.js";
 import LimitStream from "./LimitStream.js";
 import OutputStream from "./OutputStream.js";
-new RandomNumbersStream(10, 100).pipe(new FilterNumberStream((num => num % 10 ==0)))
-.pipe(new LimitStream(20)).pipe(new OutputStream())
+import { pipeline } from "node:stream/promises";
+async function displayStreamedNumbers(min: number, max: number, amount: number,
+     pred: (num: number) => boolean): Promise<void> {
+    await pipeline(
+        new RandomNumbersStream(min, max),
+        new FilterNumberStream(pred),
+        new LimitStream(amount),
+        new OutputStream(" ", createWriteStream("large_file"))
+    )
+}
+displayStreamedNumbers(10, 100, 15, num => num % 2 != 0).then(()=> console.log("Bye"))
 
 
 
