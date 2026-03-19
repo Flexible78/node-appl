@@ -1,23 +1,10 @@
 import "dotenv/config";
-import LoggerEmitter from "./LoggerEmitter.js";
-import type { LoggerLevel } from "./LoggerLevel.js";
-import ConsoleHandler from "./consoleLogHandler.js";
-import FileHandler from "./fileLogHandler.js";
-import TimeFormatter from "./TimeFormatter.js";
+import logger from "./logger.js";
+import { createWriteStream } from "node:fs";
+import RandomNumbersStream from "./RandomNumbersStream.js";
+const writeStream = createWriteStream("large_file", { highWaterMark: 1024 * 1024 * 10})
+console.time("pipe")
+new RandomNumbersStream(1_000_000_000, 10, 3000000).pipe(writeStream)
+writeStream.on("finish", ()=>console.timeEnd("pipe"))
 
-const formatter = new TimeFormatter("EST");
-const loggerEmitter = new LoggerEmitter([
-    new ConsoleHandler(formatter),
-    new FileHandler("logs.txt", formatter),
-]);
 
-loggerEmitter.setLevelHandler("error", new FileHandler("errors.txt", formatter));
-
-const entries: { level: LoggerLevel; message: string }[] = [
-    { level: "info", message: "Hello world" },
-    { level: "warn", message: "Watch out" },
-    { level: "error", message: "Something went wrong" },
-    { level: "trace", message: "Trace details" },
-];
-
-entries.forEach(({ level, message }) => loggerEmitter.log(level, message));
