@@ -1,10 +1,25 @@
 import "dotenv/config";
 import logger from "./logger.js";
-import { createWriteStream } from "node:fs";
-import RandomNumbersStream from "./RandomNumbersStream.js";
-const writeStream = createWriteStream("large_file", {encoding: "utf8", highWaterMark: 1024 * 1024 * 10})
-console.time("pipe")
-new RandomNumbersStream(1_000_000_000).pipe(writeStream)
-writeStream.on("finish", ()=>console.timeEnd("pipe"))
+import readline from "node:readline"
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+})
+function ask() {
+  rl.question("enter arithmetic expression or exit >   ", (line) => {
+    if(line === "exit") {
+      rl.close()
+    } else {
+     try {
+       const res = eval(line)
+       console.log(`Result=${res}`)
+     } catch (error) {
+         console.error(`invalid expression ${(error as Error).message}`)
+     }
+    }
+    ask()
+  })
+}
+ask()
 
 
