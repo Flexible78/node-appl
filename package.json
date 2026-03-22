@@ -5,9 +5,9 @@
   "license": "ISC",
   "author": "Tel-Ran",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/controller/index.ts",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx watch src/controller/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
     "check": "tsc --noEmit",
