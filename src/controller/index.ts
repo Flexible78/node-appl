@@ -34,8 +34,8 @@ function getCalcData(url: string | undefined): CalcData {
   const op1: number = +urlTokens[2];
   const op2: number = +urlTokens[3];
   const operation: string = urlTokens[1];
-  if (isNaN(op1)) throw new ServiceError(400, `an operand op1 (${op1}) must be a number`);
-  if (isNaN(op2)) throw new ServiceError(400, `an operand op1 (${op2}) must be a number`);
+  if (isNaN(op1)) throw new ServiceError(400, `an operand op1 (${urlTokens[2]}) must be a number`);
+  if (isNaN(op2)) throw new ServiceError(400, `an operand op1 (${urlTokens[3]}) must be a number`);
   result = { op1, op2, operation };
 
   return result;
