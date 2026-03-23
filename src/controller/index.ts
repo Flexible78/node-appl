@@ -4,6 +4,13 @@ import http, { ServerResponse, IncomingMessage } from "node:http";
 import calculate from "../service/calculate.js";
 import { CalcData } from "../model/CalcData.js";
 import { ServiceError } from "../errors/ServiceError.js";
+import { z } from "zod";
+
+const calcSchema = z.object({
+    op1: z.number(),
+    op2: z.number(),
+    operation: z.enum(["add", "sub", "mul", "div", "percent"]),
+});
 const server = http.createServer();
 const port = process.env.PORT || 3500;
 server.listen(port, () => console.log(`server listening on port ${port}`));
@@ -20,6 +27,8 @@ server.on("request", async (req, res) => {
   catch (error: any) {
     if (error instanceof ServiceError) {
        sendResponse(res, error.code, error.message)
+    } else if (error instanceof z.ZodError) {
+        sendResponse(res, 400, error.message)
     } else {
         sendResponse(res, 500, `Inner Server error: ${error.message}`)
     }
@@ -33,7 +42,8 @@ async function getCalcData(request: IncomingMessage): Promise<CalcData> {
     }
     logger.debug(`received JSON is ${data}`)
     const result: CalcData = JSON.parse(data)
-  return result;
+    const parsedCalcData = calcSchema.parse(result)
+  return parsedCalcData;
 }
 function sendResponse(response: ServerResponse, code: number, message: string): void {
     response.statusCode = code,

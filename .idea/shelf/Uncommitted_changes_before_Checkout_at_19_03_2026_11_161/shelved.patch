@@ -1,0 +1,417 @@
+Index: src/index.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import \"dotenv/config\";\r\nimport LoggerEmitter from \"./LoggerEmitter.js\";\r\nimport type { LoggerLevel } from \"./LoggerLevel.js\";\r\nimport ConsoleHandler from \"./consoleLogHandler.js\";\r\nimport FileHandler from \"./fileLogHandler.js\";\r\nimport TimeFormatter from \"./TimeFormatter.js\";\r\n\r\nconst formatter = new TimeFormatter(\"EST\");\r\nconst loggerEmitter = new LoggerEmitter([\r\n    new ConsoleHandler(formatter),\r\n    new FileHandler(\"logs.txt\", formatter),\r\n]);\r\n\r\nloggerEmitter.setLevelHandler(\"error\", new FileHandler(\"errors.txt\", formatter));\r\n\r\nconst entries: { level: LoggerLevel; message: string }[] = [\r\n    { level: \"info\", message: \"Hello world\" },\r\n    { level: \"warn\", message: \"Watch out\" },\r\n    { level: \"error\", message: \"Something went wrong\" },\r\n    { level: \"trace\", message: \"Trace details\" },\r\n];\r\n\r\nentries.forEach(({ level, message }) => loggerEmitter.log(level, message));\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/index.ts b/src/index.ts
+--- a/src/index.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ b/src/index.ts	(date 1773903645601)
+@@ -1,23 +1,9 @@
+ import "dotenv/config";
+-import LoggerEmitter from "./LoggerEmitter.js";
+-import type { LoggerLevel } from "./LoggerLevel.js";
+-import ConsoleHandler from "./consoleLogHandler.js";
+-import FileHandler from "./fileLogHandler.js";
+-import TimeFormatter from "./TimeFormatter.js";
+-
+-const formatter = new TimeFormatter("EST");
+-const loggerEmitter = new LoggerEmitter([
+-    new ConsoleHandler(formatter),
+-    new FileHandler("logs.txt", formatter),
+-]);
++import logger from "./logger.js";
++import { createWriteStream } from "node:fs";
++import RandomNumbersStream from "./RandomNumbersStream.js";
++const writeStream = createWriteStream("large_file", {encoding: "utf8", highWaterMark: 1024 * 1024 * 10})
++console.time("pipe")
++new RandomNumbersStream(1_000_000_000).pipe(writeStream)
++writeStream.on("finish", ()=>console.timeEnd("pipe"))
+ 
+-loggerEmitter.setLevelHandler("error", new FileHandler("errors.txt", formatter));
+-
+-const entries: { level: LoggerLevel; message: string }[] = [
+-    { level: "info", message: "Hello world" },
+-    { level: "warn", message: "Watch out" },
+-    { level: "error", message: "Something went wrong" },
+-    { level: "trace", message: "Trace details" },
+-];
+-
+-entries.forEach(({ level, message }) => loggerEmitter.log(level, message));
+Index: src/LoggerFormatter.ts
+===================================================================
+diff --git a/src/LoggerFormatter.ts b/src/LoggerFormatter.ts
+deleted file mode 100644
+--- a/src/LoggerFormatter.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,5 +0,0 @@
+-import type { LoggerLevel } from "./LoggerLevel.js"
+-
+-export default interface LoggerFormatter {
+-    format(level: LoggerLevel, message: string): string
+-}
+Index: src/consoleLogHandler.ts
+===================================================================
+diff --git a/src/consoleLogHandler.ts b/src/consoleLogHandler.ts
+deleted file mode 100644
+--- a/src/consoleLogHandler.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,11 +0,0 @@
+-import type { LoggerLevel } from "./LoggerLevel.js"
+-import LoggerHandler from "./LoggerHandler.js";
+-import LoggerFormatter from "./LoggerFormatter.js";
+-
+-export default class ConsoleHandler implements LoggerHandler {
+-    constructor(private _formatter: LoggerFormatter) {}
+-
+-    handler(): (level: LoggerLevel, message: string) => void {
+-        return (level: LoggerLevel, message: string) => console.log(this._formatter.format(level, message));
+-    }
+-}
+Index: src/logger.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import pino from \"pino\"\r\nimport pretty from \"pino-pretty\"\r\nconst prettyTime = new Intl.DateTimeFormat(undefined,{\r\n  timeZone: process.env.TZ,\r\n  dateStyle: \"short\",\r\n  timeStyle: \"medium\",\r\n  hour12: false\r\n\r\n\r\n})\r\nconst stream = pretty({\r\n  translateTime: false,\r\n  customPrettifiers: {\r\n    time: (value) => prettyTime.format(new Date(Number(value)))\r\n  },\r\n  ignore: \"pid,hostname\",\r\n  levelFirst: true,\r\n  singleLine: true\r\n})\r\n\r\nconst validLevels = new Set([\"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\", \"silent\"])\r\nconst envLevel = (process.env.LOGGER_LEVEL ?? \"\").toLowerCase()\r\nconst level = validLevels.has(envLevel) ? envLevel : \"info\"\r\n\r\nconst logger = pino({ level }, stream)\r\nexport default logger\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/logger.ts b/src/logger.ts
+--- a/src/logger.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ b/src/logger.ts	(date 1773827892297)
+@@ -1,26 +1,28 @@
+ import pino from "pino"
+-import pretty from "pino-pretty"
+-const prettyTime = new Intl.DateTimeFormat(undefined,{
++const prettyTime = new Intl.DateTimeFormat(undefined, {
+   timeZone: process.env.TZ,
+   dateStyle: "short",
+   timeStyle: "medium",
+   hour12: false
+-
++})
+ 
+-})
+-const stream = pretty({
+-  translateTime: false,
+-  customPrettifiers: {
+-    time: (value) => prettyTime.format(new Date(Number(value)))
+-  },
+-  ignore: "pid,hostname",
+-  levelFirst: true,
+-  singleLine: true
++const transport = pino.transport({
++  target: "pino-pretty",
++  options: {
++    translateTime: false,
++    customPrettifiers: {
++      time: (value) => prettyTime.format(new Date(Number(value)))
++    },
++    ignore: "pid,hostname",
++    levelFirst: true,
++    singleLine: true,
++    crlf: true
++  }
+ })
+ 
+ const validLevels = new Set(["trace", "debug", "info", "warn", "error", "fatal", "silent"])
+ const envLevel = (process.env.LOGGER_LEVEL ?? "").toLowerCase()
+ const level = validLevels.has(envLevel) ? envLevel : "info"
+ 
+-const logger = pino({ level }, stream)
++const logger = pino({ level }, transport)
+ export default logger
+Index: src/LoggerEmitter.ts
+===================================================================
+diff --git a/src/LoggerEmitter.ts b/src/LoggerEmitter.ts
+deleted file mode 100644
+--- a/src/LoggerEmitter.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,33 +0,0 @@
+-import { EventEmitter } from "node:events";
+-import {
+-    defaultLoggerLevel,
+-    isLoggerLevel,
+-    loggerLevelPriority,
+-    type LoggerLevel,
+-} from "./LoggerLevel.js";
+-import LoggerHandler from "./LoggerHandler.js";
+-
+-export default class LoggerEmitter extends EventEmitter {
+-    constructor(handlers: LoggerHandler[] = []) {
+-        super();
+-        handlers.forEach(handler => this.setHandler(handler));
+-    }
+-
+-    log(level: LoggerLevel, message: string): void {
+-        const envLevel = process.env.LOGGER_LEVEL?.toLowerCase() ?? defaultLoggerLevel;
+-        const currentLevel = isLoggerLevel(envLevel) ? envLevel : defaultLoggerLevel;
+-
+-        if (loggerLevelPriority[level] <= loggerLevelPriority[currentLevel]) {
+-            this.emit("message", level, message);
+-            this.emit(level, level, message);
+-        }
+-    }
+-
+-    setHandler(handler: LoggerHandler): void {
+-        this.on("message", handler.handler());
+-    }
+-
+-    setLevelHandler(level: LoggerLevel, handler: LoggerHandler): void {
+-        this.on(level, handler.handler());
+-    }
+-}
+Index: src/LoggerHandler.ts
+===================================================================
+diff --git a/src/LoggerHandler.ts b/src/LoggerHandler.ts
+deleted file mode 100644
+--- a/src/LoggerHandler.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,5 +0,0 @@
+-import type { LoggerLevel } from "./LoggerLevel.js"
+-
+-export default interface LoggerHandler {
+-    handler(): (level: LoggerLevel, message: string) => void
+-}
+Index: presentation/logger-logic.md
+===================================================================
+diff --git a/presentation/logger-logic.md b/presentation/logger-logic.md
+deleted file mode 100644
+--- a/presentation/logger-logic.md	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,89 +0,0 @@
+-# Logger logic for presentation
+-
+-## 1. Main idea
+-The solution has two goals:
+-- include LoggerLevel inside the formatted message
+-- allow adding handlers for one specific LoggerLevel
+-
+-## 2. Shared logger level model
+-File: src/LoggerLevel.ts
+-- stores all supported levels in one place
+-- stores numeric priorities for comparison
+-- provides fallback level `info`
+-- provides runtime validation for `process.env.LOGGER_LEVEL`
+-
+-Why numbers solve the problem:
+-- fatal = 1
+-- error = 2
+-- warn = 3
+-- info = 4
+-- debug = 5
+-- trace = 6
+-
+-Smaller number means more important level.
+-If current env level is `warn`, then allowed messages are `fatal`, `error`, `warn`.
+-That becomes one comparison:
+-`loggerLevelPriority[level] <= loggerLevelPriority[currentLevel]`
+-
+-## 3. Formatting with LoggerLevel
+-File: src/TimeFormatter.ts
+-The formatter now receives two arguments:
+-- level
+-- message
+-
+-It returns a string like:
+-`INFO 3/18/26, 02:18:13 Hello world`
+-
+-So LoggerLevel is now part of the final formatted output.
+-
+-## 4. Generic handlers and level handlers
+-File: src/LoggerEmitter.ts
+-When a message passes the filter, the emitter does two emits:
+-- `this.emit("message", level, message)` for all generic handlers
+-- `this.emit(level, level, message)` for handlers of one specific level
+-
+-This is the key use of the Node.js hint about `emit(eventName, ...args)`.
+-
+-## 5. Handler flow
+-Files:
+-- src/consoleLogHandler.ts
+-- src/fileLogHandler.ts
+-
+-Handlers receive both `level` and `message`.
+-Then they call the formatter and either:
+-- print to console
+-- append to file
+-
+-## 6. Demo scenario in index.ts
+-File: src/index.ts
+-- ConsoleHandler receives all allowed messages
+-- FileHandler("logs.txt") receives all allowed messages
+-- setLevelHandler("error", new FileHandler("errors.txt", formatter)) receives only ERROR messages
+-
+-## 7. How to demonstrate to the lecturer
+-Type check:
+-`npm run check`
+-
+-Run with default `info` behavior:
+-`$env:LOGGER_LEVEL="info"; npx tsx src/index.ts`
+-
+-Expected in terminal:
+-- INFO line
+-- WARN line
+-- ERROR line
+-- no TRACE line
+-
+-Expected in `errors.txt`:
+-- only ERROR lines
+-
+-Run with full verbosity:
+-`$env:LOGGER_LEVEL="trace"; npx tsx src/index.ts`
+-
+-Expected in terminal:
+-- INFO
+-- WARN
+-- ERROR
+-- TRACE
+-
+-## 8. One-minute explanation
+-I centralized log levels and priorities in one file, passed LoggerLevel into the formatter, and used EventEmitter in two ways: one generic `message` event for all allowed messages and one level-named event for handlers of a specific level. This keeps the code compact and matches the lecturer's hint.
+Index: src/TimeFormatter.ts
+===================================================================
+diff --git a/src/TimeFormatter.ts b/src/TimeFormatter.ts
+deleted file mode 100644
+--- a/src/TimeFormatter.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,27 +0,0 @@
+-import type { LoggerLevel } from "./LoggerLevel.js"
+-import LoggerFormatter from "./LoggerFormatter.js";
+-
+-export default class TimeFormatter implements LoggerFormatter {
+-    constructor(private _timeZone?: string) {}
+-
+-    format(level: LoggerLevel, message: string): string {
+-        let running = true;
+-        let time: Intl.DateTimeFormat;
+-
+-        while (running) {
+-            try {
+-                time = Intl.DateTimeFormat(undefined, {
+-                    timeZone: this._timeZone || process.env.TZ,
+-                    dateStyle: "short",
+-                    timeStyle: "medium",
+-                    hour12: false,
+-                });
+-                running = false;
+-            } catch {
+-                this._timeZone = undefined;
+-            }
+-        }
+-
+-        return `${level.toUpperCase()} ${time!.format(new Date())} ${message}`;
+-    }
+-}
+Index: src/LoggerLevel.ts
+===================================================================
+diff --git a/src/LoggerLevel.ts b/src/LoggerLevel.ts
+deleted file mode 100644
+--- a/src/LoggerLevel.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,16 +0,0 @@
+-export const loggerLevelPriority = {
+-    fatal: 1,
+-    error: 2,
+-    warn: 3,
+-    info: 4,
+-    debug: 5,
+-    trace: 6,
+-} as const
+-
+-export type LoggerLevel = keyof typeof loggerLevelPriority
+-
+-export const defaultLoggerLevel: LoggerLevel = "info"
+-
+-export function isLoggerLevel(value: string): value is LoggerLevel {
+-    return value in loggerLevelPriority
+-}
+Index: src/fileLogHandler.ts
+===================================================================
+diff --git a/src/fileLogHandler.ts b/src/fileLogHandler.ts
+deleted file mode 100644
+--- a/src/fileLogHandler.ts	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,12 +0,0 @@
+-import { appendFileSync } from "node:fs"
+-import type { LoggerLevel } from "./LoggerLevel.js"
+-import LoggerHandler from "./LoggerHandler.js"
+-import LoggerFormatter from "./LoggerFormatter.js"
+-
+-export default class FileHandler implements LoggerHandler {
+-    constructor(private _filePath: string, private _formatter: LoggerFormatter) {}
+-
+-    handler(): (level: LoggerLevel, message: string) => void {
+-        return (level: LoggerLevel, message: string) => appendFileSync(this._filePath, "\n" + this._formatter.format(level, message), { encoding: "utf-8" })
+-    }
+-}
+Index: .gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>node_modules\r\ndist\r\nfile.txt\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ b/.gitignore	(date 1773828977102)
+@@ -1,3 +1,3 @@
+ node_modules
+ dist
+-file.txt
++large_file
+Index: presentation/logger-line-by-line.md
+===================================================================
+diff --git a/presentation/logger-line-by-line.md b/presentation/logger-line-by-line.md
+deleted file mode 100644
+--- a/presentation/logger-line-by-line.md	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,29 +0,0 @@
+-# LoggerEmitter line by line
+-
+-File: src/LoggerEmitter.ts
+-
+-1. Import EventEmitter from Node.js. It is the base mechanism for subscribing and emitting events.
+-2-7. Import shared logger helpers:
+-- defaultLoggerLevel gives fallback level (`info`)
+-- isLoggerLevel validates env value
+-- loggerLevelPriority stores level priorities
+-- LoggerLevel is the shared union type
+-8. Import LoggerHandler interface.
+-10. Start LoggerEmitter class.
+-11. Constructor accepts an array of handlers.
+-12. Call parent constructor of EventEmitter.
+-13. Register every passed handler as a generic `message` handler.
+-16. Start `log(level, message)` method.
+-17. Read `LOGGER_LEVEL` from environment and fallback to default `info`.
+-18. If env value is invalid, replace it with default `info`.
+-20. Compare message priority with configured priority.
+-21. Emit generic `message` event for handlers that should receive all allowed messages.
+-22. Emit level-specific event like `error`, `warn`, `info` for handlers registered only for that level.
+-26. `setHandler` subscribes a handler to the generic `message` event.
+-27. Handler provides its callback through `handler.handler()`.
+-30. `setLevelHandler` subscribes a handler to one concrete LoggerLevel event.
+-31. The event name itself is the level, for example `error`.
+-33. End of class.
+-
+-Short explanation for the lecturer:
+-The class has one generic event for all allowed messages and one level-specific event for each LoggerLevel. That is why Node EventEmitter fits the task well.
+Index: log.txt
+===================================================================
+diff --git a/log.txt b/log.txt
+deleted file mode 100644
+--- a/log.txt	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ /dev/null	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
+@@ -1,12 +0,0 @@
+-Hello World!
+-Hello World!
+-Hello World!
+-Hello World!
+-Hello World
+-Hello World!!
+-Hello World!!
+-Hello World!!
+-Hello world
+-What's up
+-How are you
+-Bye

@@ -1,0 +1,25 @@
+Index: readme.md
+===================================================================
+diff --git a/readme.md b/src/RandomNumbersStream.ts
+rename from readme.md
+rename to src/RandomNumbersStream.ts
+--- a/readme.md	(revision e04e2170d5941cbf839546bed6b861873137c2d8)
++++ b/src/RandomNumbersStream.ts	(date 1773903626935)
+@@ -1,0 +1,17 @@
++
++import { Readable, ReadableOptions } from "node:stream";
++export default class RandomNumbersStream extends Readable {
++ counter: number = 0
++ constructor(private _amount: number, options: ReadableOptions={encoding: "utf-8"}) {
++  super(options)
++ }
++ override _read(_: number): void {
++  if (this.counter >= this._amount) {
++   this.push(null)
++  } else {
++   this.push(this.counter + " ")
++   this.counter++
++  }
++
++ }
++}
